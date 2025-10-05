@@ -11,6 +11,7 @@ import { X, CheckCircle } from "lucide-react";
 type FormData = {
   name: string;
   email: string;
+  phone: string;
 };
 
 export function WaitlistModal() {
@@ -20,6 +21,7 @@ export function WaitlistModal() {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
+    phone: "",
   });
 
   useEffect(() => {
@@ -35,9 +37,13 @@ export function WaitlistModal() {
   const validate = (data: FormData) => {
     if (!data.name.trim()) return "이름을 입력해주세요.";
     if (!data.email.trim()) return "이메일을 입력해주세요.";
+    if (!data.phone.trim()) return "전화번호를 입력해주세요.";
     // 아주 간단한 이메일 패턴 체크 (필요시 강화 가능)
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email);
     if (!emailOk) return "올바른 이메일 형식을 입력해주세요.";
+    // 전화번호 패턴 체크 (한국 전화번호 형식)
+    const phoneOk = /^[0-9-+\s()]{10,}$/.test(data.phone.replace(/\s/g, ''));
+    if (!phoneOk) return "올바른 전화번호 형식을 입력해주세요.";
     return null;
   };
 
@@ -88,7 +94,7 @@ export function WaitlistModal() {
         setTimeout(() => {
           setIsOpen(false);
           setIsSubmitted(false);
-          setFormData({ name: "", email: "" });
+          setFormData({ name: "", email: "", phone: "" });
         }, 3000);
       } else {
         const serverMsg =
@@ -113,7 +119,7 @@ export function WaitlistModal() {
     if (isSubmitting) return; // 전송 중에는 닫기 방지(선택)
     setIsOpen(false);
     setIsSubmitted(false);
-    setFormData({ name: "", email: "" });
+    setFormData({ name: "", email: "", phone: "" });
   };
 
   if (!isOpen) return null;
@@ -177,6 +183,21 @@ export function WaitlistModal() {
                     setFormData((prev) => ({ ...prev, email: e.target.value }))
                   }
                   placeholder="이메일을 입력해주세요"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="phone">전화번호 *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  required
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                  placeholder="전화번호를 입력해주세요"
                   disabled={isSubmitting}
                 />
               </div>

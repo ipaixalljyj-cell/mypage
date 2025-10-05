@@ -12,13 +12,13 @@ export async function POST(request) {
   });
   
   try {
-    const { name, email } = await request.json();
-    console.log('받은 데이터:', { name, email });
+    const { name, email, phone } = await request.json();
+    console.log('받은 데이터:', { name, email, phone });
 
     // 입력 검증
-    if (!name || !email) {
+    if (!name || !email || !phone) {
       return Response.json(
-        { success: false, message: '이름과 이메일은 필수입니다.' },
+        { success: false, message: '이름, 이메일, 전화번호는 필수입니다.' },
         { status: 400 }
       );
     }
@@ -61,6 +61,18 @@ export async function POST(request) {
             email: email,
           };
         }
+        
+        // 전화번호 필드 찾기 (여러 가능한 이름 시도)
+        const phoneField = Object.keys(database.properties).find(key => 
+          database.properties[key].type === 'phone_number' || 
+          key.toLowerCase().includes('phone') ||
+          key.toLowerCase().includes('전화')
+        );
+        if (phoneField) {
+          properties[phoneField] = {
+            phone_number: phone,
+          };
+        }
       }
       
       // 필드가 없으면 일반적인 이름으로 시도
@@ -76,6 +88,9 @@ export async function POST(request) {
         };
         properties['이메일'] = {
           email: email,
+        };
+        properties['전화번호'] = {
+          phone_number: phone,
         };
       }
       
@@ -101,12 +116,12 @@ export async function POST(request) {
       console.error('Notion 연동 오류:', notionError.message);
       
       // Notion 연동 실패 시에도 성공 응답 반환
-      console.log('웨이팅 리스트 등록 성공 (Notion 연동 실패):', { name, email });
+      console.log('웨이팅 리스트 등록 성공 (Notion 연동 실패):', { name, email, phone });
       
       return Response.json({
         success: true,
         message: '웨이팅 리스트에 등록되었습니다!',
-        data: { name, email }
+        data: { name, email, phone }
       });
     }
 
