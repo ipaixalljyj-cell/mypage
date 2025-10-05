@@ -1,98 +1,144 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { X, CheckCircle } from "lucide-react";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { X, CheckCircle } from "lucide-react"
+type FormData = {
+  name: string;
+  email: string;
+};
 
 export function WaitlistModal() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formData, setFormData] = useState({
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
-  })
+  });
 
   useEffect(() => {
     const handleOpenWaitlist = () => {
-      setIsOpen(true)
-      setIsSubmitted(false)
+      setIsOpen(true);
+      setIsSubmitted(false);
+    };
+
+    window.addEventListener("openWaitlist", handleOpenWaitlist);
+    return () => window.removeEventListener("openWaitlist", handleOpenWaitlist);
+  }, []);
+
+  const validate = (data: FormData) => {
+    if (!data.name.trim()) return "이름을 입력해주세요.";
+    if (!data.email.trim()) return "이메일을 입력해주세요.";
+    // 아주 간단한 이메일 패턴 체크 (필요시 강화 가능)
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email);
+    if (!emailOk) return "올바른 이메일 형식을 입력해주세요.";
+    return null;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // 중복 제출 방지
+    if (isSubmitting) return;
+
+    const msg = validate(formData);
+    if (msg) {
+      alert(msg);
+      return;
     }
 
-    window.addEventListener("openWaitlist", handleOpenWaitlist)
-    return () => window.removeEventListener("openWaitlist", handleOpenWaitlist)
-  }, [])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    console.log('폼 제출 시작:', formData)
-    setIsSubmitting(true)
+    console.log("폼 제출 시작:", formData);
+    setIsSubmitting(true);
 
     try {
-      console.log('API 호출 중...')
-      
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      console.log("API 호출 중...");
+
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
-      console.log('응답 받음:', response.status)
-      
-      const data = await response.json();
-      console.log('응답 데이터:', data)
+      console.log("응답 받음:", response.status);
 
-      if (data.success) {
-        console.log('성공!')
+      // 응답이 JSON이 아닐 수도 있으므로 방어적으로 처리
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch {
+        // JSON 파싱 실패 시 메시지 보완
+        if (!response.ok) {
+          throw new Error(`서버 오류(${response.status})`);
+        }
+      }
+
+      console.log("응답 데이터:", data);
+
+      if (response.ok && data?.success) {
+        console.log("성공!");
         setIsSubmitted(true);
-        
+
         // 성공한 경우에만 3초 후 모달 닫기
         setTimeout(() => {
-          setIsOpen(false)
-          setIsSubmitted(false)
-          setFormData({ name: "", email: "" })
-        }, 3000)
-        
+          setIsOpen(false);
+          setIsSubmitted(false);
+          setFormData({ name: "", email: "" });
+        }, 3000);
       } else {
-        console.error('등록 실패:', data.message);
-        alert('등록에 실패했습니다: ' + data.message);
+        const serverMsg =
+          (data && (data.message || data.error)) ||
+          `서버 응답 오류 (${response.status})`;
+        console.error("등록 실패:", serverMsg);
+        alert("등록에 실패했습니다: " + serverMsg);
       }
     } catch (error) {
-      console.error('네트워크 오류:', error);
-      alert('네트워크 오류가 발생했습니다: ' + error.message);
+      console.error("네트워크 오류:", error);
+      if (error instanceof Error) {
+        alert("네트워크 오류가 발생했습니다: " + error.message);
+      } else {
+        alert("알 수 없는 오류가 발생했습니다.");
+      }
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleClose = () => {
-    setIsOpen(false)
-    setIsSubmitted(false)
-    setFormData({ name: "", email: "" })
-  }
+    if (isSubmitting) return; // 전송 중에는 닫기 방지(선택)
+    setIsOpen(false);
+    setIsSubmitted(false);
+    setFormData({ name: "", email: "" });
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="relative">
-          <button onClick={handleClose} className="absolute right-4 top-4 text-muted-foreground hover:text-foreground">
+          <button
+            onClick={handleClose}
+            className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+            aria-label="닫기"
+            disabled={isSubmitting}
+          >
             <X size={20} />
           </button>
 
           {!isSubmitted ? (
             <>
-              <CardTitle className="text-xl text-center">웨이팅 리스트 등록</CardTitle>
-              <p className="text-muted-foreground text-center text-sm">출시되면 가장 먼저 알려드릴게요!</p>
+              <CardTitle className="text-xl text-center">
+                웨이팅 리스트 등록
+              </CardTitle>
+              <p className="text-muted-foreground text-center text-sm">
+                출시되면 가장 먼저 알려드릴게요!
+              </p>
             </>
           ) : (
             <div className="text-center">
@@ -112,7 +158,9 @@ export function WaitlistModal() {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                   placeholder="이름을 입력해주세요"
                   disabled={isSubmitting}
                 />
@@ -125,18 +173,20 @@ export function WaitlistModal() {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  }
                   placeholder="이메일을 입력해주세요"
                   disabled={isSubmitting}
                 />
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full bg-primary hover:bg-primary/90"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? '등록 중...' : '등록하기'}
+                {isSubmitting ? "등록 중..." : "등록하기"}
               </Button>
             </form>
           ) : (
@@ -146,7 +196,11 @@ export function WaitlistModal() {
                 <br />
                 출시되면 가장 먼저 알려드릴게요.
               </p>
-              <Button onClick={handleClose} variant="outline" className="w-full bg-transparent">
+              <Button
+                onClick={handleClose}
+                variant="outline"
+                className="w-full bg-transparent"
+              >
                 닫기
               </Button>
             </div>
@@ -154,5 +208,5 @@ export function WaitlistModal() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

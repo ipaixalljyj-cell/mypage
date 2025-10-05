@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = ".next"                # Netlify Next.js Runtime이 이 설정을 읽어 처리
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  node_bundler = "esbuild"         # (선택) 빠른 번들링
+  included_files = ["public/**"]   # (선택) 함수가 필요로 하는 정적 파일 포함
